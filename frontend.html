@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Full Course Generator</title>
+</head>
+<body style="font-family: Arial; max-width:700px; margin:auto; padding:20px;">
+    <h2>📚 Full Course Generator</h2>
+
+    <label>Server URL (keep default if your backend is on localhost:8000):</label><br>
+    <input id="server" type="text" value="http://localhost:8000" style="width:100%; padding:8px;"><br><br>
+
+    <label>Subject:</label><br>
+    <input id="subject" type="text" placeholder="e.g., Python" style="width:100%; padding:8px;"><br><br>
+
+    <label>Difficulty:</label><br>
+    <select id="difficulty" style="width:100%; padding:8px;">
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hard">Hard</option>
+    </select><br><br>
+
+    <label>Focus Area:</label><br>
+    <input id="focus" type="text" placeholder="e.g., Basics / AI / Web Dev" style="width:100%; padding:8px;"><br><br>
+
+    <label>No. of Units:</label><br>
+    <input id="units" type="number" value="5" style="width:100%; padding:8px;"><br><br>
+
+    <button id="generateBtn" style="padding:10px 20px; background:black; color:white; border:none; cursor:pointer;">
+        Generate Course
+    </button>
+    <button id="copyBtn" style="padding:10px 12px; margin-left:8px;">Copy Output</button>
+    <button id="downloadBtn" style="padding:10px 12px; margin-left:8px;">Download</button>
+
+    <h3 style="margin-top:20px;">✅ Output:</h3>
+    <pre id="output" style="white-space:pre-wrap; background:#f1f1f1; padding:15px; min-height:120px;"></pre>
+
+    <script>
+        const serverInput = document.getElementById('server');
+        const generateBtn = document.getElementById('generateBtn');
+        const outputEl = document.getElementById('output');
+        const copyBtn = document.getElementById('copyBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        generateBtn.addEventListener('click', generateCourse);
+        copyBtn.addEventListener('click', () => navigator.clipboard && navigator.clipboard.writeText(outputEl.innerText));
+        downloadBtn.addEventListener('click', downloadOutput);
+
+        async function generateCourse() {
+            outputEl.innerText = "⏳ Generating course...";
+
+            const body = {
+                subject: document.getElementById("subject").value,
+                difficulty: document.getElementById("difficulty").value,
+                focus_area: document.getElementById("focus").value,
+                units: parseInt(document.getElementById("units").value) || 0
+            };
+
+            // allow custom server or default to /generate-course on same host
+            let base = (serverInput.value || '').trim();
+            // if empty, use relative path so it works when served from same origin
+            if (!base) base = '';
+
+            const url = base ? (base.replace(/\/$/, '') + '/generate-course') : '/generate-course';
+
+            try {
+                const res = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body)
+                });
+
+                // try to read JSON first, fall back to text
+                let data;
+                const contentType = res.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) data = await res.json();
+                else data = await res.text();
+
+                // pretty-print JSON objects, otherwise show text as-is
+                if (typeof data === 'object') outputEl.innerText = JSON.stringify(data, null, 2);
+                else outputEl.innerText = data;
+            } catch (err) {
+                outputEl.innerText = '⚠️ Error: ' + (err.message || err);
+            }
+        }
+
+        function downloadOutput() {
+            const text = outputEl.innerText || '';
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'course_output.txt';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
